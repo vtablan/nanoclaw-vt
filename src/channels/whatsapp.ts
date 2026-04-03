@@ -12,7 +12,11 @@ import {
   proto,
   useMultiFileAuthState,
 } from '@whiskeysockets/baileys';
-import type { GroupMetadata, WAMessageKey, WASocket } from '@whiskeysockets/baileys';
+import type {
+  GroupMetadata,
+  WAMessageKey,
+  WASocket,
+} from '@whiskeysockets/baileys';
 
 import {
   ASSISTANT_HAS_OWN_NUMBER,

@@ -168,7 +168,11 @@ function buildVolumeMounts(
 
   // Mount host Claude OAuth credentials so the claude CLI inside the container
   // can authenticate using the subscription token instead of an API key.
-  const hostCredentials = path.join(os.homedir(), '.claude', '.credentials.json');
+  const hostCredentials = path.join(
+    os.homedir(),
+    '.claude',
+    '.credentials.json',
+  );
   if (fs.existsSync(hostCredentials)) {
     mounts.push({
       hostPath: hostCredentials,
