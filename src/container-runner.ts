@@ -166,15 +166,29 @@ function buildVolumeMounts(
     readonly: false,
   });
 
-  // Gmail credentials directory (for Gmail MCP inside the container)
-  const homeDir = os.homedir();
-  const gmailDir = path.join(homeDir, '.gmail-mcp');
-  if (fs.existsSync(gmailDir)) {
+  // Mount host Claude OAuth credentials so the claude CLI inside the container
+  // can authenticate using the subscription token instead of an API key.
+  const hostCredentials = path.join(os.homedir(), '.claude', '.credentials.json');
+  if (fs.existsSync(hostCredentials)) {
     mounts.push({
-      hostPath: gmailDir,
-      containerPath: '/home/node/.gmail-mcp',
-      readonly: false, // MCP may need to refresh OAuth tokens
+      hostPath: hostCredentials,
+      containerPath: '/home/node/.claude/.credentials.json',
+      readonly: true,
     });
+  }
+
+  // Gmail credentials directory (for Gmail MCP inside the container)
+  // Only mounted for the main group — other groups must not access personal email.
+  if (isMain) {
+    const homeDir = os.homedir();
+    const gmailDir = path.join(homeDir, '.gmail-mcp');
+    if (fs.existsSync(gmailDir)) {
+      mounts.push({
+        hostPath: gmailDir,
+        containerPath: '/home/node/.gmail-mcp',
+        readonly: false, // MCP may need to refresh OAuth tokens
+      });
+    }
   }
 
   // Per-group IPC namespace: each group gets its own IPC directory
@@ -258,6 +272,15 @@ async function buildContainerArgs(
       { containerName },
       'OneCLI gateway not reachable — container will have no credentials',
     );
+  }
+
+  // OneCLI always injects ANTHROPIC_API_KEY=placeholder even when no Anthropic
+  // secret is configured. Strip it so the claude CLI falls back to OAuth credentials
+  // from the mounted ~/.claude/.credentials.json.
+  for (let i = args.length - 2; i >= 0; i--) {
+    if (args[i] === '-e' && args[i + 1]?.startsWith('ANTHROPIC_API_KEY=')) {
+      args.splice(i, 2);
+    }
   }
 
   // Runtime-specific args for host gateway resolution
